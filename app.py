@@ -338,43 +338,33 @@ DEFAULT_VALUES = {
 
 # ==================== HELPER FUNCTIONS ====================
 
-# Get the exact numerical columns the scaler was trained on (in correct order)
-SCALER_NUMERICAL_FEATURES = list(scaler.feature_names_in_) if hasattr(scaler, 'feature_names_in_') else NUMERICAL_FEATURES
+def prepare_input_data(inputs_dict):
+    """
+    Prepares input dictionary into a DataFrame aligned with model expectations.
+    The scaler was trained on ALL features (including one-hot encoded categoricals),
+    so we must pass the complete feature set in the exact same order.
+    """
+    # 1. Convert the raw dictionary to a DataFrame
+    input_df = pd.DataFrame([inputs_dict])
 
-def prepare_input_data(inputs):
-    """Prepare input data for prediction with robust feature alignment"""
-    # Create base dataframe with numerical features
-    input_df = pd.DataFrame([inputs])
+    # 2. Ensure all dummy/one-hot columns match the training structure exactly
+    # (Assuming scaler.feature_names_in_ contains the exact columns expected)
+    if hasattr(scaler, "feature_names_in_"):
+        expected_features = scaler.feature_names_in_
+        # Add any missing columns with 0
+        for col in expected_features:
+            if col not in input_df.columns:
+                input_df[col] = 0
+        # Reorder columns to match the scaler's exact training order
+        input_df = input_df[expected_features]
 
-    # Add all categorical features with default 0
-    for feat in feature_names:
-        if feat not in input_df.columns:
-            input_df[feat] = 0
-
-    # Set the selected categorical values
-    for feat in inputs:
-        if feat in SUB_GRADE_FEATURES + VERIFICATION_FEATURES + APPLICATION_FEATURES + INITIAL_LIST_FEATURES + PURPOSE_FEATURES + HOME_OWNERSHIP_FEATURES:
-            input_df[feat] = inputs[feat]
-
-    # Ensure column order matches training exactly
-    input_df = input_df[feature_names]
-
-    # Scale numerical features using only the columns the scaler expects
-    # This handles case where scaler was fit on a subset or different order
-    try:
-        # Use scaler's expected feature names and order
-        scaler_cols = [c for c in SCALER_NUMERICAL_FEATURES if c in input_df.columns]
-        if len(scaler_cols) != len(SCALER_NUMERICAL_FEATURES):
-            missing = set(SCALER_NUMERICAL_FEATURES) - set(scaler_cols)
-            st.warning(f"Scaler expects {len(SCALER_NUMERICAL_FEATURES)} features, found {len(scaler_cols)}. Missing: {missing}")
-
-        # Reorder columns to match scaler's expected order before transforming
-        input_df[scaler_cols] = scaler.transform(input_df[scaler_cols])
-    except Exception as e:
-        st.error(f"Scaling error: {e}")
-        st.error(f"Scaler expects: {SCALER_NUMERICAL_FEATURES}")
-        st.error(f"Available numerical cols: {[c for c in NUMERICAL_FEATURES if c in input_df.columns]}")
-        raise
+        # 3. Scale the entire DataFrame (since the scaler expects all features)
+        scaled_values = scaler.transform(input_df)
+        input_df = pd.DataFrame(scaled_values, columns=expected_features)
+    else:
+        # Fallback: scale only numerical columns if scaler has no feature_names_in_
+        numerical_cols = [c for c in NUMERICAL_FEATURES if c in input_df.columns]
+        input_df[numerical_cols] = scaler.transform(input_df[numerical_cols])
 
     return input_df
 
