@@ -338,8 +338,11 @@ DEFAULT_VALUES = {
 
 # ==================== HELPER FUNCTIONS ====================
 
+# Get the exact numerical columns the scaler was trained on (in correct order)
+SCALER_NUMERICAL_FEATURES = list(scaler.feature_names_in_) if hasattr(scaler, 'feature_names_in_') else NUMERICAL_FEATURES
+
 def prepare_input_data(inputs):
-    """Prepare input data for prediction"""
+    """Prepare input data for prediction with robust feature alignment"""
     # Create base dataframe with numerical features
     input_df = pd.DataFrame([inputs])
 
@@ -353,12 +356,25 @@ def prepare_input_data(inputs):
         if feat in SUB_GRADE_FEATURES + VERIFICATION_FEATURES + APPLICATION_FEATURES + INITIAL_LIST_FEATURES + PURPOSE_FEATURES + HOME_OWNERSHIP_FEATURES:
             input_df[feat] = inputs[feat]
 
-    # Ensure column order matches training
+    # Ensure column order matches training exactly
     input_df = input_df[feature_names]
 
-    # Scale numerical features
-    numerical_cols = [c for c in NUMERICAL_FEATURES if c in input_df.columns]
-    input_df[numerical_cols] = scaler.transform(input_df[numerical_cols])
+    # Scale numerical features using only the columns the scaler expects
+    # This handles case where scaler was fit on a subset or different order
+    try:
+        # Use scaler's expected feature names and order
+        scaler_cols = [c for c in SCALER_NUMERICAL_FEATURES if c in input_df.columns]
+        if len(scaler_cols) != len(SCALER_NUMERICAL_FEATURES):
+            missing = set(SCALER_NUMERICAL_FEATURES) - set(scaler_cols)
+            st.warning(f"Scaler expects {len(SCALER_NUMERICAL_FEATURES)} features, found {len(scaler_cols)}. Missing: {missing}")
+
+        # Reorder columns to match scaler's expected order before transforming
+        input_df[scaler_cols] = scaler.transform(input_df[scaler_cols])
+    except Exception as e:
+        st.error(f"Scaling error: {e}")
+        st.error(f"Scaler expects: {SCALER_NUMERICAL_FEATURES}")
+        st.error(f"Available numerical cols: {[c for c in NUMERICAL_FEATURES if c in input_df.columns]}")
+        raise
 
     return input_df
 
