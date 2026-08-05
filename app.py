@@ -5,12 +5,10 @@ Professional UI for predicting loan default risk using ML models
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import json
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
 from sklearn.preprocessing import MinMaxScaler
 import warnings
 warnings.filterwarnings('ignore')
@@ -267,18 +265,12 @@ def load_artifacts():
     # Load XGBoost model
     artifacts['xgb_model'] = joblib.load('loan_default_xgb.pkl')
 
-    # No Keras/TensorFlow model: this deployment uses XGBoost only
-    artifacts['has_keras'] = False
-    artifacts['keras_model'] = None
-
     return artifacts
 
 artifacts = load_artifacts()
 feature_names = artifacts['feature_names']
 scaler = artifacts['scaler']
 xgb_model = artifacts['xgb_model']
-has_keras = False
-keras_model = None
 
 # Feature categories for UI organization
 NUMERICAL_FEATURES = [
@@ -463,36 +455,25 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # Sidebar - Model selection and info
+    # Sidebar content
     with st.sidebar:
-        st.markdown("### ⚙️ Model Configuration")
-
-        model_options = ['XGBoost (Recommended)']
-
-        selected_model = st.selectbox(
-            "Select Model",
-            model_options,
-            help="XGBoost is used for predictions in this deployment."
+        st.markdown("### ⚙️ Model Overview")
+        st.markdown(
+            "XGBoost powers predictions in this deployment. \n"
+            "It scores loan default risk using structured borrower and loan data."
         )
 
         st.markdown("---")
-        st.markdown("### 📊 Model Performance")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("XGBoost Accuracy", "75%", "↑ 3%")
-            st.metric("XGBoost F1 (Macro)", "0.64", "↑ 0.04")
-        with col2:
-            st.metric("NN Accuracy", "N/A")
-            st.metric("NN F1 (Macro)", "N/A")
+        st.markdown("### 📊 XGBoost Performance")
+        st.metric("Accuracy", "75%", "↑ 3%")
+        st.metric("Macro F1", "0.64", "↑ 0.04")
 
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.info(
             "This app predicts the probability of loan default using "
-            "XGBoost trained on Lending Club data (~395K loans). The models "
-            "use 69 features including loan details, borrower credit history, "
-            "and categorical variables."
+            "XGBoost trained on Lending Club data. It is designed for fast, "
+            "explainable risk scoring from borrower and loan features."
         )
 
         st.markdown("---")
@@ -502,7 +483,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["🔮 Prediction", "📈 Analytics", "📋 Batch Processing"])
 
     with tab1:
-        prediction_tab(selected_model)
+        prediction_tab()
 
     with tab2:
         analytics_tab()
@@ -510,7 +491,7 @@ def main():
     with tab3:
         batch_tab()
 
-def prediction_tab(selected_model):
+def prediction_tab():
     """Main prediction interface"""
 
     # Two-column layout
