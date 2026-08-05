@@ -267,17 +267,9 @@ def load_artifacts():
     # Load XGBoost model
     artifacts['xgb_model'] = joblib.load('loan_default_xgb.pkl')
 
-    # Load Keras model (lazy import to avoid forcing TensorFlow/protobuf at startup)
-    try:
-        # Import here so Streamlit can start even if TensorFlow/protobuf are incompatible
-        # Pylance may not have TensorFlow available in the editor environment;
-        # silence the missing-module diagnostic while keeping runtime import.
-        from tensorflow.keras.models import load_model as _load_keras_model  # type: ignore[import]
-        artifacts['keras_model'] = _load_keras_model('loan_default_model_v1.keras')
-        artifacts['has_keras'] = True
-    except Exception:
-        artifacts['has_keras'] = False
-        artifacts['keras_model'] = None
+    # No Keras/TensorFlow model: this deployment uses XGBoost only
+    artifacts['has_keras'] = False
+    artifacts['keras_model'] = None
 
     return artifacts
 
@@ -285,8 +277,8 @@ artifacts = load_artifacts()
 feature_names = artifacts['feature_names']
 scaler = artifacts['scaler']
 xgb_model = artifacts['xgb_model']
-has_keras = artifacts['has_keras']
-keras_model = artifacts['keras_model'] if has_keras else None
+has_keras = False
+keras_model = None
 
 # Feature categories for UI organization
 NUMERICAL_FEATURES = [
@@ -376,13 +368,6 @@ def predict_xgb(input_df):
     prob = xgb_model.predict_proba(input_df)[0, 1]
     return prob
 
-def predict_keras(input_df):
-    """Get Keras model prediction"""
-    if keras_model is None:
-        return None
-    prob = keras_model.predict(input_df, verbose=0)[0, 0]
-    return float(prob)
-
 def get_risk_level(prob):
     """Determine risk level based on probability"""
     # prob is treated as probability of DEFAULT. Higher prob => higher risk.
@@ -425,45 +410,6 @@ def create_gauge_chart(probability, title="Default Probability"):
         margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='rgba(0,0,0,0)',
         font={'color': '#1e293b', 'family': 'Inter, sans-serif'}
-    )
-    return fig
-
-def create_risk_breakdown_chart(prob_xgb, prob_keras=None):
-    """Create a comparison chart"""
-    models = ['XGBoost']
-    probs = [prob_xgb * 100]
-    colors = ['#3b82f6']
-
-    if prob_keras is not None:
-        models.append('Neural Network')
-        probs.append(prob_keras * 100)
-        colors.append('#8b5cf6')
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=models,
-        y=probs,
-        marker_color=colors,
-        text=[f'{p:.1f}%' for p in probs],
-        textposition='auto',
-        textfont={'size': 16, 'color': 'white'},
-        hovertemplate='%{x}: %{y:.1f}%<extra></extra>'
-    ))
-
-    # Add threshold lines
-    fig.add_hline(y=30, line_dash="dash", line_color="#16a34a", annotation_text="Low Risk Threshold (30%)")
-    fig.add_hline(y=60, line_dash="dash", line_color="#dc2626", annotation_text="High Risk Threshold (60%)")
-
-    fig.update_layout(
-        title="Model Comparison: Default Probability",
-        yaxis_title="Default Probability (%)",
-        yaxis_range=[0, 100],
-        height=350,
-        margin=dict(l=20, r=20, t=60, b=40),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font={'family': 'Inter, sans-serif'},
-        showlegend=False
     )
     return fig
 
@@ -522,14 +468,11 @@ def main():
         st.markdown("### ⚙️ Model Configuration")
 
         model_options = ['XGBoost (Recommended)']
-        if has_keras:
-            model_options.append('Neural Network (Keras)')
-            model_options.append('Ensemble (Both)')
 
         selected_model = st.selectbox(
             "Select Model",
             model_options,
-            help="XGBoost generally performs better on tabular data. Ensemble averages both models."
+            help="XGBoost is used for predictions in this deployment."
         )
 
         st.markdown("---")
@@ -540,24 +483,20 @@ def main():
             st.metric("XGBoost Accuracy", "75%", "↑ 3%")
             st.metric("XGBoost F1 (Macro)", "0.64", "↑ 0.04")
         with col2:
-            if has_keras:
-                st.metric("NN Accuracy", "69%", "↑ 1%")
-                st.metric("NN F1 (Macro)", "0.61", "↑ 0.02")
-            else:
-                st.metric("NN Accuracy", "N/A")
-                st.metric("NN F1 (Macro)", "N/A")
+            st.metric("NN Accuracy", "N/A")
+            st.metric("NN F1 (Macro)", "N/A")
 
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.info(
             "This app predicts the probability of loan default using "
-            "machine learning models trained on Lending Club data "
-            "(~395K loans). The models use 69 features including "
-            "loan details, borrower credit history, and categorical variables."
+            "XGBoost trained on Lending Club data (~395K loans). The models "
+            "use 69 features including loan details, borrower credit history, "
+            "and categorical variables."
         )
 
         st.markdown("---")
-        st.caption("Built with Streamlit • XGBoost • TensorFlow/Keras")
+        st.caption("Built with Streamlit • XGBoost")
 
     # Main content tabs
     tab1, tab2, tab3 = st.tabs(["🔮 Prediction", "📈 Analytics", "📋 Batch Processing"])
@@ -814,16 +753,7 @@ def prediction_tab(selected_model):
             input_df = prepare_input_data(inputs)
 
             with st.spinner("Running prediction..."):
-                prob_xgb = predict_xgb(input_df)
-                prob_keras = predict_keras(input_df) if 'Ensemble' in selected_model or 'Neural Network' in selected_model else None
-
-                # Use ensemble or selected model
-                if 'Ensemble' in selected_model and prob_keras is not None:
-                    prob = (prob_xgb + prob_keras) / 2
-                elif 'Neural Network' in selected_model and prob_keras is not None:
-                    prob = prob_keras
-                else:
-                    prob = prob_xgb
+                prob = predict_xgb(input_df)
 
             # Get risk level
             risk_level, risk_label, risk_emoji = get_risk_level(prob)

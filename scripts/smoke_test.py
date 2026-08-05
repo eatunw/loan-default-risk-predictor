@@ -17,14 +17,9 @@ print('scaler loaded')
 xgb = joblib.load('loan_default_xgb.pkl')
 print('xgb loaded')
 
-# Try loading keras model
-try:
-    from tensorflow.keras.models import load_model
-    keras_model = load_model('loan_default_model_v1.keras')
-    print('keras model loaded')
-except Exception as e:
-    keras_model = None
-    print('keras model not loaded:', type(e).__name__, e)
+# Keras removed: running XGBoost-only smoke test
+keras_model = None
+print('Keras/TensorFlow removed; running XGBoost-only smoke test')
 
 # Default numeric values (match app defaults)
 defaults = {
