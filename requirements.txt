@@ -7,3 +7,5 @@ scikit-learn>=1.3.0
 xgboost>=2.0.0
 tensorflow>=2.13.0
 joblib>=1.3.0
+# Pin Starlette to <0.27 to avoid GZipResponder signature mismatch
+starlette<0.27
