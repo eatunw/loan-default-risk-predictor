@@ -270,7 +270,9 @@ def load_artifacts():
     # Load Keras model (lazy import to avoid forcing TensorFlow/protobuf at startup)
     try:
         # Import here so Streamlit can start even if TensorFlow/protobuf are incompatible
-        from tensorflow.keras.models import load_model as _load_keras_model
+        # Pylance may not have TensorFlow available in the editor environment;
+        # silence the missing-module diagnostic while keeping runtime import.
+        from tensorflow.keras.models import load_model as _load_keras_model  # type: ignore[import]
         artifacts['keras_model'] = _load_keras_model('loan_default_model_v1.keras')
         artifacts['has_keras'] = True
     except Exception:
@@ -383,12 +385,13 @@ def predict_keras(input_df):
 
 def get_risk_level(prob):
     """Determine risk level based on probability"""
+    # prob is treated as probability of DEFAULT. Higher prob => higher risk.
     if prob >= 0.7:
-        return 'low', 'Low Risk', '🟢'
+        return 'high', 'High Risk', '🔴'
     elif prob >= 0.4:
         return 'medium', 'Medium Risk', '🟡'
     else:
-        return 'high', 'High Risk', '🔴'
+        return 'low', 'Low Risk', '🟢'
 
 def create_gauge_chart(probability, title="Default Probability"):
     """Create a gauge chart for risk visualization"""
@@ -705,8 +708,8 @@ def prediction_tab(selected_model):
             # Home ownership
             home_ownership = st.selectbox(
                 "Home Ownership",
-                options=['RENT', 'MORTGAGE', 'OWN', 'OTHER'],
-                index=0,
+                options=HOME_OWNERSHIP_FEATURES,
+                index=HOME_OWNERSHIP_FEATURES.index('RENT'),
                 help="Borrower's home ownership status"
             )
 
@@ -828,7 +831,7 @@ def prediction_tab(selected_model):
             # Display results
             st.markdown(f"""
             <div class="risk-card risk-{risk_level}">
-                <div class="prob-label">Probability of Full Repayment</div>
+                <div class="prob-label">Probability of Default</div>
                 <div class="prob-text" style="color: {'#16a34a' if risk_level=='low' else '#f59e0b' if risk_level=='medium' else '#dc2626'};">
                     {prob*100:.1f}%
                 </div>
