@@ -807,6 +807,7 @@ def prediction_tab():
                 fig, ax = plt.subplots(figsize=(10, 5))
                 shap.plots.waterfall(shap_values[0], show=False)
                 st.pyplot(fig)
+                plt.close(fig)
 
                 top_features = get_top_shap_features(shap_values.values[0], feature_names, top_n=3)
                 st.info(f"💡 Key risk drivers: {', '.join(top_features)}")
