@@ -559,7 +559,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["🔮 Prediction", "📈 Analytics", "📋 Batch Processing"])
 
     with tab1:
-        prediction_tab()
+        prediction_tab(selected_model)
 
     with tab2:
         analytics_tab()
@@ -567,7 +567,7 @@ def main():
     with tab3:
         batch_tab()
 
-def prediction_tab():
+def prediction_tab(selected_model):
     """Main prediction interface"""
 
     # Two-column layout
