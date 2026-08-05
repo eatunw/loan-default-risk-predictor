@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-tensorflow
+tensorflow-cpu==2.13.1
 numpy
 scikit-learn
 joblib

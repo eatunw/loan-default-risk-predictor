@@ -5,9 +5,8 @@ numpy>=1.24.0
 plotly>=5.15.0
 scikit-learn>=1.3.0
 xgboost>=2.0.0
-tensorflow>=2.13.0
+tensorflow-cpu==2.13.1
 joblib>=1.3.0
 # Pin Starlette to <0.27 to avoid GZipResponder signature mismatch
 starlette<0.27
-# Protobuf pinned for TensorFlow compatibility (may conflict with older Streamlit)
-protobuf>=6.31.1,<8.0.0
+# Let pip resolve a compatible protobuf for TensorFlow
