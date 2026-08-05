@@ -5,10 +5,13 @@ Professional UI for predicting loan default risk using ML models
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 import json
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
+import shap
 from sklearn.preprocessing import MinMaxScaler
 import warnings
 warnings.filterwarnings('ignore')
@@ -266,6 +269,19 @@ def load_artifacts():
     artifacts['xgb_model'] = joblib.load('loan_default_xgb.pkl')
 
     return artifacts
+
+@st.cache_resource
+def load_shap_explainer():
+    """Load and cache the SHAP explainer for the XGBoost model."""
+    return shap.TreeExplainer(xgb_model)
+
+
+def get_top_shap_features(shap_vals, feature_names, top_n=3):
+    """Return the top features by absolute SHAP contribution."""
+    abs_vals = np.abs(np.array(shap_vals)).ravel()
+    idx = np.argsort(abs_vals)[::-1][:top_n]
+    return [feature_names[i] for i in idx]
+
 
 artifacts = load_artifacts()
 feature_names = artifacts['feature_names']
@@ -782,6 +798,18 @@ def prediction_tab():
                     Favorable terms and standard processing recommended.
                 </div>
                 """, unsafe_allow_html=True)
+
+            show_shap = st.checkbox("🔍 Show SHAP explanation for this prediction")
+            if show_shap:
+                explainer = load_shap_explainer()
+                shap_values = explainer(input_df)
+
+                fig, ax = plt.subplots(figsize=(10, 5))
+                shap.plots.waterfall(shap_values[0], show=False)
+                st.pyplot(fig)
+
+                top_features = get_top_shap_features(shap_values.values[0], feature_names, top_n=3)
+                st.info(f"💡 Key risk drivers: {', '.join(top_features)}")
 
             # Key factors
             st.markdown("### 🎯 Key Risk Factors")
