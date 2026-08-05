@@ -11,8 +11,6 @@ import json
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-import tensorflow as tf
-from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import warnings
 warnings.filterwarnings('ignore')
@@ -269,12 +267,15 @@ def load_artifacts():
     # Load XGBoost model
     artifacts['xgb_model'] = joblib.load('loan_default_xgb.pkl')
 
-    # Load Keras model
+    # Load Keras model (lazy import to avoid forcing TensorFlow/protobuf at startup)
     try:
-        artifacts['keras_model'] = load_model('loan_default_model_v1.keras')
+        # Import here so Streamlit can start even if TensorFlow/protobuf are incompatible
+        from tensorflow.keras.models import load_model as _load_keras_model
+        artifacts['keras_model'] = _load_keras_model('loan_default_model_v1.keras')
         artifacts['has_keras'] = True
-    except:
+    except Exception:
         artifacts['has_keras'] = False
+        artifacts['keras_model'] = None
 
     return artifacts
 
