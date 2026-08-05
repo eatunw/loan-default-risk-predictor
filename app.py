@@ -774,10 +774,6 @@ def prediction_tab(selected_model):
             # Gauge chart
             st.plotly_chart(create_gauge_chart(prob), width='stretch')
 
-            # Model comparison if applicable
-            if prob_keras is not None:
-                st.plotly_chart(create_risk_breakdown_chart(prob_xgb, prob_keras), width='stretch')
-
             # Risk interpretation
             st.markdown("### 📋 Risk Assessment")
 
@@ -897,16 +893,12 @@ def analytics_tab():
             'XGBoost': ['75%', '39%', '48%', '87%', '82%', '0.64', '0.82'],
         }
 
-        if has_keras:
-            perf_data['Neural Network'] = ['69%', '34%', '60%', '88%', '71%', '0.61', '0.79']
-
         perf_df = pd.DataFrame(perf_data)
         st.dataframe(perf_df, width='stretch', hide_index=True)
 
         st.markdown("#### 🎯 Optimal Thresholds")
         st.info(
-            "**XGBoost**: Optimal threshold = 0.40 (maximizes macro F1)\n\n"
-            "**Neural Network**: Optimal threshold = 0.40 (maximizes macro F1)\n\n"
+            "**XGBoost**: Optimal threshold = 0.40 (maximizes macro F1). "
             "Default threshold of 0.5 favors precision for 'Fully Paid' class. "
             "Lower threshold improves recall for 'Charged Off' detection."
         )
@@ -963,19 +955,12 @@ def analytics_tab():
         """)
 
     with arch_col2:
-        if has_keras:
-            st.markdown("""
-            **Neural Network (Keras)**
-            - **Architecture**: 4-layer MLP with BatchNorm & Dropout
-            - **Layers**: 256 → 128 → 64 → 32 → 1
-            - **Activations**: ReLU (hidden), Sigmoid (output)
-            - **Regularization**: BatchNorm + Dropout (0.3, 0.3, 0.2)
-            - **Optimizer**: Adam
-            - **Loss**: Binary Crossentropy
-            - **Class Weights**: Balanced (2.55 : 0.62)
-            """)
-        else:
-            st.info("Neural Network model not available in this deployment.")
+        st.markdown("""
+        **Model Notes**
+        - This deployment uses XGBoost only.
+        - The Keras/Neural Network model has been removed for compatibility.
+        - Predictions are based on XGBoost feature importances and calibrated scaling.
+        """)
 
 def batch_tab():
     """Batch prediction from CSV upload"""
