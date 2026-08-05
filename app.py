@@ -759,7 +759,7 @@ def prediction_tab(selected_model):
         predict_btn = st.button(
             "🔮 Predict Default Risk",
             type="primary",
-            use_container_width=True
+            width='stretch'
         )
 
     with right_col:
@@ -842,11 +842,11 @@ def prediction_tab(selected_model):
             """, unsafe_allow_html=True)
 
             # Gauge chart
-            st.plotly_chart(create_gauge_chart(prob), use_container_width=True)
+            st.plotly_chart(create_gauge_chart(prob), width='stretch')
 
             # Model comparison if applicable
             if prob_keras is not None:
-                st.plotly_chart(create_risk_breakdown_chart(prob_xgb, prob_keras), use_container_width=True)
+                st.plotly_chart(create_risk_breakdown_chart(prob_xgb, prob_keras), width='stretch')
 
             # Risk interpretation
             st.markdown("### 📋 Risk Assessment")
@@ -906,7 +906,7 @@ def prediction_tab(selected_model):
 
             # Feature importance
             st.markdown("### 📊 Feature Importance (Top 15)")
-            st.plotly_chart(create_feature_importance_chart(input_df), use_container_width=True)
+            st.plotly_chart(create_feature_importance_chart(input_df), width='stretch')
 
         else:
             # Empty state
@@ -955,7 +955,7 @@ def analytics_tab():
             font={'family': 'Inter, sans-serif'},
             xaxis_title="Importance Score"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with col2:
         st.markdown("#### 📊 Model Performance Comparison")
@@ -971,7 +971,7 @@ def analytics_tab():
             perf_data['Neural Network'] = ['69%', '34%', '60%', '88%', '71%', '0.61', '0.79']
 
         perf_df = pd.DataFrame(perf_data)
-        st.dataframe(perf_df, use_container_width=True, hide_index=True)
+        st.dataframe(perf_df, width='stretch', hide_index=True)
 
         st.markdown("#### 🎯 Optimal Thresholds")
         st.info(
@@ -1004,7 +1004,7 @@ def analytics_tab():
             paper_bgcolor='rgba(0,0,0,0)',
             font={'family': 'Inter, sans-serif'}
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         # Metrics breakdown
         col_a, col_b = st.columns(2)
@@ -1085,7 +1085,7 @@ def batch_tab():
             df = pd.read_csv(uploaded_file)
 
             st.markdown("#### 📄 Data Preview")
-            st.dataframe(df.head(), use_container_width=True)
+            st.dataframe(df.head(), width='stretch')
 
             st.markdown(f"**Shape:** {df.shape[0]} rows × {df.shape[1]} columns")
 
@@ -1107,7 +1107,7 @@ def batch_tab():
             if missing_num or missing_cat:
                 st.error(f"Missing required columns:\nNumerical: {missing_num}\nCategorical: {missing_cat}")
             else:
-                if st.button("🚀 Run Batch Prediction", type="primary", use_container_width=True):
+                if st.button("🚀 Run Batch Prediction", type="primary", width='stretch'):
                     with st.spinner(f"Processing {len(df)} loans..."):
                         results = []
 
@@ -1185,7 +1185,7 @@ def batch_tab():
                     display_df = results_df[['loan_id', 'loan_amnt', 'int_rate', 'sub_grade',
                                              'default_probability', 'risk_level', 'risk_label']].copy()
                     display_df['default_probability'] = display_df['default_probability'].apply(lambda x: f"{x*100:.1f}%")
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    st.dataframe(display_df, width='stretch', hide_index=True)
 
                     # Download button
                     csv = results_df.to_csv(index=False)
@@ -1194,7 +1194,7 @@ def batch_tab():
                         csv,
                         file_name="loan_default_predictions.csv",
                         mime="text/csv",
-                        use_container_width=True
+                        width='stretch'
                     )
 
                     # Risk distribution chart
@@ -1208,7 +1208,7 @@ def batch_tab():
                         title="Portfolio Risk Distribution"
                     )
                     fig.update_layout(height=400)
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             st.error(f"Error reading CSV: {str(e)}")
